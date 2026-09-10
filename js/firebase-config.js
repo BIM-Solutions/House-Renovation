@@ -4,17 +4,14 @@
 // stored on this phone only. Fill it in (see README.md, "Turning on shared
 // sync") and both of you see the same live data on every device.
 
-export const firebaseConfig = null;
-
-// Example of a filled-in config (copy the values from the Firebase console):
-// export const firebaseConfig = {
-//   apiKey: "AIza...",
-//   authDomain: "your-project.firebaseapp.com",
-//   projectId: "your-project",
-//   storageBucket: "your-project.appspot.com",
-//   messagingSenderId: "1234567890",
-//   appId: "1:1234567890:web:abcdef",
-// };
+export const firebaseConfig = {
+  apiKey: "AIzaSyAVShWLBrk2QosOUpmMDbr_Cgg2_9a1GjM",
+  authDomain: "house-renovate-cc25d.firebaseapp.com",
+  projectId: "house-renovate-cc25d",
+  storageBucket: "house-renovate-cc25d.firebasestorage.app",
+  messagingSenderId: "501776550029",
+  appId: "1:501776550029:web:2f813a9aae02366123bac4"
+};
 
 // A single shared "household" that both of you write to. Any short id works,
 // but it must match the id used in firestore.rules.
