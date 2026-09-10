@@ -1,5 +1,9 @@
-// Offline support. Bump CACHE whenever files change so phones pick up the update.
-const CACHE = 'reno-v1';
+// Offline support.
+//
+// Strategy: when online, always fetch the latest app files from the network and
+// refresh the cache (so config or code changes show up on the next open). When
+// offline, serve the cached copy. Bump CACHE to force old caches to be dropped.
+const CACHE = 'reno-v2';
 const SHELL = [
   './',
   './index.html',
@@ -14,7 +18,11 @@ const SHELL = [
 ];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  e.waitUntil(
+    caches.open(CACHE)
+      .then(c => c.addAll(SHELL.map(u => new Request(u, { cache: 'reload' }))))
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener('activate', e => {
@@ -24,19 +32,22 @@ self.addEventListener('activate', e => {
   );
 });
 
-// Same-origin: serve from cache, refresh in the background (stale-while-revalidate).
-// Everything else (Firebase SDK, Google auth) goes straight to the network.
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
+  // Firebase SDK, Google sign-in etc. go straight to the network.
   if (e.request.method !== 'GET' || url.origin !== location.origin) return;
-  e.respondWith(
-    caches.open(CACHE).then(async cache => {
+
+  e.respondWith((async () => {
+    const cache = await caches.open(CACHE);
+    try {
+      const res = await fetch(e.request, { cache: 'no-cache' });
+      if (res.ok) cache.put(e.request, res.clone());
+      return res;
+    } catch {
       const cached = await cache.match(e.request, { ignoreSearch: true });
-      const network = fetch(e.request).then(res => {
-        if (res.ok) cache.put(e.request, res.clone());
-        return res;
-      }).catch(() => cached);
-      return cached || network;
-    })
-  );
+      if (cached) return cached;
+      if (e.request.mode === 'navigate') return cache.match('./index.html');
+      throw new Error('offline and not cached');
+    }
+  })());
 });
