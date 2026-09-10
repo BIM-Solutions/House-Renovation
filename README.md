@@ -69,8 +69,10 @@ If sign-in says the account isn't allowed, the email isn't in the rules from ste
 
 ## Updating the app
 
-Edit the files and push to `main`. Phones pick up the new version on their next open; bump
-`CACHE` in `sw.js` when you change files so offline copies refresh promptly.
+Edit the files and push to `main`. Phones fetch the latest files every time the app is opened
+with a connection, so an update shows after closing and reopening the app. If a phone seems stuck
+on an old version, open the site in Chrome rather than the installed icon and refresh, or in
+Chrome go to ⋮ → Settings → Site settings → find the site → **Clear & reset**, then reopen.
 
 ## Developing locally
 
