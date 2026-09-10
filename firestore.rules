@@ -1,0 +1,20 @@
+// Firestore security rules for the shared household.
+// Deploy: paste into Firebase console → Firestore Database → Rules → Publish.
+//
+// Only the Google accounts listed below can read or write. Add both of your
+// Gmail addresses (the ones you sign in to your phones with).
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isHouseholdMember() {
+      return request.auth != null && request.auth.token.email in [
+        'you@gmail.com',
+        'partner@gmail.com'
+      ];
+    }
+    // "home" must match householdId in js/firebase-config.js
+    match /households/home/{document=**} {
+      allow read, write: if isHouseholdMember();
+    }
+  }
+}
