@@ -30,6 +30,7 @@
     <button data-tab="rooms" class="active"><span class="tab-icon">&#127968;</span>Rooms</button>
     <button data-tab="tasks"><span class="tab-icon">&#9745;</span>Tasks</button>
     <button data-tab="shopping"><span class="tab-icon">&#128722;</span>Shopping</button>
+    <button data-tab="money"><span class="tab-icon">&#128176;</span>Money</button>
     <button data-tab="settings"><span class="tab-icon">&#9881;</span>Settings</button>
   </nav>
 
@@ -80,10 +81,11 @@
             <input name="due" type="date">
           </label>
           <label class="field">
-            <span>Est. cost (&pound;)</span>
-            <input name="cost" type="number" inputmode="decimal" min="0" step="1" placeholder="0">
+            <span>Labour / other cost (&pound;)</span>
+            <input name="cost" type="number" inputmode="decimal" min="0" step="0.01" placeholder="e.g. plasterer">
           </label>
         </div>
+        <label class="inline-check"><input type="checkbox" name="costPaid"> Labour / other cost already paid</label>
         <label class="field">
           <span>Notes</span>
           <textarea name="notes" rows="3" placeholder="Measurements, colours, links, who to call..."></textarea>
@@ -92,7 +94,11 @@
         <fieldset class="materials">
           <legend>Materials &amp; tools needed</legend>
           <div id="materialRows"></div>
-          <button type="button" class="btn ghost small" data-action="add-material">+ Add item</button>
+          <div class="mat-footer">
+            <button type="button" class="btn ghost small" data-action="add-material">+ Add item</button>
+            <span class="muted" id="materialTotal"></span>
+          </div>
+          <datalist id="supplierList"></datalist>
         </fieldset>
 
         <button type="button" class="btn danger full" data-action="delete" id="taskDeleteBtn" hidden>Delete task</button>

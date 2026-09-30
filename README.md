@@ -13,9 +13,14 @@ on GitHub Pages, with optional free Google Firebase sync so both phones share on
 - **Rooms** – one card per room with progress and who still has jobs there.
 - **Tasks** – title, room, who (you / partner / both / tradesperson), status, priority, due date,
   estimated cost, notes.
-- **Materials & tools** per task, with "already bought" ticks.
-- **Shopping list** – every unbought item across all open jobs, grouped by room and job.
-  Tick things off in the shop, or copy/share the whole list as text.
+- **Materials & tools** per task: quantity, price each, which shop, and a link to the product.
+  Tick items off as they're bought.
+- **Shopping list** – every unbought item across all open jobs, grouped **by shop** (so you can
+  place one bulk order per website, with an "Open site" button and a subtotal) or by room.
+  Copy/share the whole list as text.
+- **Money** – set a budget in Settings and see total planned, spent so far, still to pay and
+  over/under budget, broken down by room, by task and by shop. Materials count as spent once
+  ticked as bought; a task's labour/other cost counts once you mark it paid.
 - **Filters** – "just my jobs", overdue, in progress, done.
 - **Offline** – open it in the loft with no signal; changes sync when you're back online.
 - **Backup** – export/import everything as a JSON file.

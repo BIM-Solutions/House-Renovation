@@ -3,7 +3,7 @@
 // Strategy: when online, always fetch the latest app files from the network and
 // refresh the cache (so config or code changes show up on the next open). When
 // offline, serve the cached copy. Bump CACHE to force old caches to be dropped.
-const CACHE = 'reno-v2';
+const CACHE = 'reno-v3';
 const SHELL = [
   './',
   './index.html',
