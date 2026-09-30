@@ -38,10 +38,65 @@ function defaultRooms() {
 }
 
 function emptyState() {
-  return { members: DEFAULT_MEMBERS.map(m => ({ ...m })), rooms: [], tasks: [] };
+  return { members: DEFAULT_MEMBERS.map(m => ({ ...m })), rooms: [], tasks: [], budget: null };
 }
 
-export function normaliseTask(t) {
+function toNumber(v) {
+  if (v === '' || v === null || v === undefined) return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+// Turn "www.screwfix.com/p/123" into "Screwfix"; "" if nothing usable.
+export function supplierFromUrl(url) {
+  try {
+    const host = new URL(normaliseUrl(url)).hostname.replace(/^www\./, '');
+    const label = host.split('.')[0];
+    return label ? label.charAt(0).toUpperCase() + label.slice(1) : '';
+  } catch { return ''; }
+}
+
+export function normaliseUrl(url) {
+  const u = (url || '').trim();
+  if (!u) return '';
+  return /^[a-z]+:\/\//i.test(u) ? u : 'https://' + u;
+}
+
+export function normaliseMaterial(m) {
+  // Older data stored qty as free text ("3 bags"); keep the number, fold the rest into the name.
+  let name = (m.name || '').trim();
+  let qty = m.qty;
+  if (typeof qty === 'string') {
+    const match = qty.trim().match(/^(\d+(?:\.\d+)?)\s*(.*)$/);
+    if (match) { qty = Number(match[1]); if (match[2]) name = `${name} (${match[2]})`; }
+    else { if (qty.trim()) name = `${name} (${qty.trim()})`; qty = 1; }
+  }
+  qty = toNumber(qty);
+  if (qty === null || qty < 0) qty = 1;
+  const url = normaliseUrl(m.url);
+  const supplier = (m.supplier || '').trim() || supplierFromUrl(url);
+  return {
+    id: m.id || uid(),
+    name,
+    qty,
+    price: toNumber(m.price),
+    supplier,
+    url,
+    bought: !!m.bought,
+  };
+}
+
+export function materialCost(m) { return (m.price || 0) * (m.qty ?? 1); }
+
+export function taskTotals(t) {
+  const matPlanned = t.materials.reduce((s, m) => s + materialCost(m), 0);
+  const matSpent = t.materials.filter(m => m.bought).reduce((s, m) => s + materialCost(m), 0);
+  const other = t.cost || 0;
+  const otherSpent = t.costPaid ? other : 0;
+  return { planned: matPlanned + other, spent: matSpent + otherSpent, matPlanned, matSpent, other, otherSpent };
+}
+
+export function normaliseTask(t, { touch = true } = {}) {
   return {
     id: t.id || uid(),
     roomId: t.roomId || '',
@@ -51,16 +106,17 @@ export function normaliseTask(t) {
     status: ['todo', 'doing', 'done'].includes(t.status) ? t.status : 'todo',
     priority: ['low', 'normal', 'high'].includes(t.priority) ? t.priority : 'normal',
     due: t.due || '',
-    cost: Number.isFinite(Number(t.cost)) && t.cost !== '' && t.cost !== null ? Number(t.cost) : null,
+    cost: toNumber(t.cost),
+    costPaid: !!t.costPaid,
     materials: Array.isArray(t.materials)
-      ? t.materials
-          .filter(m => m && (m.name || '').trim())
-          .map(m => ({ id: m.id || uid(), name: m.name.trim(), qty: (m.qty || '').trim(), bought: !!m.bought }))
+      ? t.materials.filter(m => m && (m.name || '').trim()).map(normaliseMaterial)
       : [],
     createdAt: t.createdAt || now(),
-    updatedAt: now(),
+    updatedAt: touch ? now() : (t.updatedAt || now()),
   };
 }
+
+function normaliseTasks(list) { return (list || []).map(t => normaliseTask(t, { touch: false })); }
 
 /* ---------------------------------------------------------------------- */
 
@@ -75,7 +131,8 @@ class LocalBackend {
       state.rooms = defaultRooms();
       this.persist(state);
     }
-    this.store._setState({ ...emptyState(), ...state });
+    state = { ...emptyState(), ...state, tasks: normaliseTasks(state.tasks) };
+    this.store._setState(state);
     this.store._emit('ready');
   }
 
@@ -96,6 +153,7 @@ class LocalBackend {
   async upsertTask(task) { this._mutate(s => upsertIn(s.tasks, task)); }
   async deleteTask(id) { this._mutate(s => { s.tasks = s.tasks.filter(t => t.id !== id); }); }
   async setMembers(members) { this._mutate(s => { s.members = members; }); }
+  async setBudget(amount) { this._mutate(s => { s.budget = amount; }); }
   async replaceAll(state) { this._mutate(s => Object.assign(s, state)); }
 }
 
@@ -157,9 +215,9 @@ class CloudBackend {
   attach() {
     const { onSnapshot } = this.fs;
     const s = this.store;
-    let roomsLoaded = false, tasksLoaded = false, membersLoaded = false;
+    let roomsLoaded = false, tasksLoaded = false, settingsLoaded = false;
     const markReady = () => {
-      if (roomsLoaded && tasksLoaded && membersLoaded && !this._ready) {
+      if (roomsLoaded && tasksLoaded && settingsLoaded && !this._ready) {
         this._ready = true;
         s._emit('ready');
         this.maybeOfferMigration();
@@ -170,13 +228,16 @@ class CloudBackend {
       roomsLoaded = true; markReady();
     }, err => this.onError(err)));
     this.unsubs.push(onSnapshot(this.col('tasks'), snap => {
-      s._patch({ tasks: snap.docs.map(d => d.data()) });
+      s._patch({ tasks: normaliseTasks(snap.docs.map(d => d.data())) });
       tasksLoaded = true; markReady();
     }, err => this.onError(err)));
-    this.unsubs.push(onSnapshot(this.docRef('settings', 'members'), snap => {
-      const data = snap.data();
-      s._patch({ members: data?.list?.length ? data.list : DEFAULT_MEMBERS.map(m => ({ ...m })) });
-      membersLoaded = true; markReady();
+    this.unsubs.push(onSnapshot(this.col('settings'), snap => {
+      const docs = Object.fromEntries(snap.docs.map(d => [d.id, d.data()]));
+      s._patch({
+        members: docs.members?.list?.length ? docs.members.list : DEFAULT_MEMBERS.map(m => ({ ...m })),
+        budget: docs.budget?.amount ?? null,
+      });
+      settingsLoaded = true; markReady();
     }, err => this.onError(err)));
   }
 
@@ -237,6 +298,7 @@ class CloudBackend {
   async upsertTask(task) { await this.fs.setDoc(this.docRef('tasks', task.id), task); }
   async deleteTask(id) { await this.fs.deleteDoc(this.docRef('tasks', id)); }
   async setMembers(members) { await this.fs.setDoc(this.docRef('settings', 'members'), { list: members }); }
+  async setBudget(amount) { await this.fs.setDoc(this.docRef('settings', 'budget'), { amount }); }
 
   async replaceAll(state) {
     // Firestore batches are capped at 500 writes; chunk to be safe.
@@ -244,6 +306,7 @@ class CloudBackend {
     (state.rooms || []).forEach(r => writes.push(['rooms', r.id, r]));
     (state.tasks || []).forEach(t => writes.push(['tasks', t.id, t]));
     if (state.members) writes.push(['settings', 'members', { list: state.members }]);
+    if (state.budget !== undefined) writes.push(['settings', 'budget', { amount: state.budget }]);
     for (let i = 0; i < writes.length; i += 400) {
       const batch = this.fs.writeBatch(this.db);
       writes.slice(i, i + 400).forEach(([c, id, data]) => batch.set(this.docRef(c, id), data));
@@ -291,6 +354,18 @@ export class Store extends EventTarget {
   member(id) { return this.state.members.find(m => m.id === id); }
   roomsSorted() { return [...this.state.rooms].sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || a.name.localeCompare(b.name)); }
   tasksInRoom(roomId) { return this.state.tasks.filter(t => t.roomId === roomId); }
+  suppliers() {
+    const seen = new Map();
+    this.state.tasks.forEach(t => t.materials.forEach(m => {
+      if (m.supplier) seen.set(m.supplier.toLowerCase(), m.supplier);
+    }));
+    return [...seen.values()].sort((a, b) => a.localeCompare(b));
+  }
+  totals() {
+    const all = { planned: 0, spent: 0 };
+    this.state.tasks.forEach(t => { const x = taskTotals(t); all.planned += x.planned; all.spent += x.spent; });
+    return all;
+  }
 
   assigneeLabel(code) {
     if (code === ASSIGNEE_BOTH) return 'Both of us';
@@ -332,11 +407,13 @@ export class Store extends EventTarget {
     const list = members.map(m => ({ id: m.id || uid(), name: (m.name || '').trim() || 'Someone', colour: m.colour || '#2a7de1' }));
     await this.backend.setMembers(list);
   }
+  async setBudget(amount) { await this.backend.setBudget(toNumber(amount)); }
   async importState(state) {
     const clean = {
       members: Array.isArray(state.members) && state.members.length ? state.members : this.state.members,
       rooms: Array.isArray(state.rooms) ? state.rooms : [],
-      tasks: Array.isArray(state.tasks) ? state.tasks.map(normaliseTask) : [],
+      tasks: Array.isArray(state.tasks) ? normaliseTasks(state.tasks) : [],
+      budget: toNumber(state.budget),
     };
     await this.backend.replaceAll(clean);
   }

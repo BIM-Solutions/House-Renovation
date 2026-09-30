@@ -145,13 +145,44 @@ main { padding: 12px 12px 90px; max-width: 720px; margin: 0 auto; }
 
 /* Shopping */
 .shop-group { padding: 0; overflow: hidden; }
-.shop-group header { padding: 10px 14px; background: var(--brand-soft); font-weight: 600; font-size: 14px; }
-.shop-group header small { display: block; color: var(--muted); font-weight: 500; }
-.shop-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-top: 1px solid var(--line); }
-.shop-item input[type="checkbox"] { width: 24px; height: 24px; accent-color: var(--ok); flex: 0 0 auto; }
-.shop-item .name { flex: 1; }
+.shop-group header { padding: 10px 14px; background: var(--brand-soft); display: flex; align-items: center; gap: 10px; }
+.shop-group header .h-main { flex: 1; min-width: 0; font-weight: 600; font-size: 15px; }
+.shop-group header .h-main small { display: block; color: var(--muted); font-weight: 500; font-size: 12px; }
+.shop-group header .h-total { font-weight: 700; white-space: nowrap; }
+.shop-group header a.site {
+  display: inline-flex; align-items: center; gap: 4px; text-decoration: none; font-size: 13px; font-weight: 600;
+  padding: 6px 10px; border-radius: 999px; background: var(--card); color: var(--brand); border: 1px solid var(--line); white-space: nowrap;
+}
+.shop-item { display: grid; grid-template-columns: 24px 1fr auto; gap: 4px 10px; align-items: center; padding: 10px 14px; border-top: 1px solid var(--line); }
+.shop-item input[type="checkbox"] { width: 24px; height: 24px; accent-color: var(--ok); }
+.shop-item .name { min-width: 0; }
+.shop-item .name small { display: block; color: var(--muted); font-size: 12px; }
+.shop-item .name small a { color: var(--brand); text-decoration: none; }
 .shop-item.bought .name { text-decoration: line-through; color: var(--muted); }
-.shop-item .qty { color: var(--muted); font-size: 14px; }
+.shop-item .amount { text-align: right; font-size: 14px; white-space: nowrap; }
+.shop-item .amount small { display: block; color: var(--muted); font-size: 12px; }
+.shop-item .amount .item-link { color: var(--brand); text-decoration: none; font-size: 16px; margin-left: 4px; }
+
+/* Money */
+.money-bar { height: 12px; border-radius: 6px; background: var(--line); overflow: hidden; display: flex; margin: 10px 0 6px; }
+.money-bar .spent { background: var(--ok); }
+.money-bar .planned { background: var(--doing); }
+.money-bar .over { background: var(--danger); }
+.money-legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; color: var(--muted); }
+.money-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: middle; }
+.money-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px 12px; margin-top: 8px; }
+.money-grid .cell { padding: 8px 10px; border-radius: 10px; background: var(--bg); }
+.money-grid .cell .v { font-size: 20px; font-weight: 700; }
+.money-grid .cell .l { font-size: 12px; color: var(--muted); }
+.money-grid .cell.neg .v { color: var(--danger); }
+.money-grid .cell.pos .v { color: var(--ok); }
+table.money { width: 100%; border-collapse: collapse; font-size: 14px; }
+table.money th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); padding: 4px 0 6px; font-weight: 600; }
+table.money td { padding: 8px 0; border-top: 1px solid var(--line); vertical-align: top; }
+table.money td.num, table.money th.num { text-align: right; white-space: nowrap; }
+table.money td .mini { height: 4px; border-radius: 2px; background: var(--line); margin-top: 6px; overflow: hidden; }
+table.money td .mini i { display: block; height: 100%; background: var(--ok); }
+table.money tr.tappable { cursor: pointer; }
 
 /* Buttons */
 .btn {
@@ -185,11 +216,12 @@ main { padding: 12px 12px 90px; max-width: 720px; margin: 0 auto; }
   display: flex; justify-content: space-around;
 }
 .tabbar button {
-  flex: 1; border: 0; background: transparent; color: var(--muted);
+  flex: 1; border: 0; background: transparent; color: var(--muted); padding: 0 2px; min-width: 0;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
   font-size: 12px; font-weight: 500;
 }
-.tabbar button .tab-icon { font-size: 22px; line-height: 1; }
+.tabbar button .tab-icon { font-size: 21px; line-height: 1; }
+.tabbar button { font-size: 11px; }
 .tabbar button.active { color: var(--brand); }
 @media (prefers-color-scheme: dark) { .tabbar button.active { color: #9fd8c8; } }
 
@@ -227,10 +259,21 @@ dialog.sheet form { display: flex; flex-direction: column; max-height: 94dvh; }
 
 fieldset.materials { border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px 12px; margin: 4px 0 0; }
 fieldset.materials legend { font-size: 13px; font-weight: 600; color: var(--muted); padding: 0 6px; }
-.mat-row { display: grid; grid-template-columns: 28px 1fr 70px 36px; gap: 6px; align-items: center; margin-bottom: 8px; }
+.mat-row {
+  border: 1px solid var(--line); border-radius: 10px; padding: 8px; margin-bottom: 8px;
+  display: grid; grid-template-columns: 28px 1fr 36px; gap: 6px 8px; align-items: center; background: var(--bg);
+}
 .mat-row input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--ok); }
-.mat-row input[type="text"] { padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); min-width: 0; }
+.mat-row input[type="text"], .mat-row input[type="number"], .mat-row input[type="url"] {
+  padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); min-width: 0; width: 100%;
+}
 .mat-row .remove { border: 0; background: transparent; color: var(--muted); font-size: 20px; width: 36px; height: 36px; }
+.mat-row .sub { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr 1.4fr; gap: 6px; }
+.mat-row .sub label { display: flex; flex-direction: column; gap: 3px; font-size: 11px; color: var(--muted); font-weight: 600; min-width: 0; }
+.mat-row .link { grid-column: 1 / -1; }
+.mat-footer { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.inline-check { display: flex; align-items: center; gap: 8px; margin: -6px 0 14px; font-size: 14px; }
+.inline-check input { width: 20px; height: 20px; accent-color: var(--brand); }
 
 /* Settings */
 .settings-list .row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); }
